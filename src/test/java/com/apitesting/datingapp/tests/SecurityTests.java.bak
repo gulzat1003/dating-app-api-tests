@@ -1,0 +1,55 @@
+package com.apitesting.datingapp.tests;
+
+import com.apitesting.datingapp.base.BaseApiTest;
+import io.restassured.response.Response;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@DisplayName("Simple API Test")
+public class SecurityTests extends BaseApiTest {
+
+    @Test
+    @DisplayName("Simple test - Get male users")
+    void simpleTestGetMaleUsers() {
+        System.out.println("🔍 Testing API connectivity...");
+
+        Response response = request()
+                .param("gender", "male")
+                .when()
+                .get("/api/test/users");
+
+        System.out.println("📊 Response status: " + response.getStatusCode());
+        System.out.println("📋 Response body: " + response.getBody().asString());
+
+        validateSuccessResponse(response);
+
+        List<Integer> maleUsers = response.jsonPath().getList("idList");
+        assertNotNull(maleUsers, "idList should not be null");
+        assertFalse(maleUsers.isEmpty(), "idList should not be empty");
+
+        System.out.println("✅ SUCCESS: Found " + maleUsers.size() + " male users");
+        System.out.println("📝 User IDs: " + maleUsers);
+
+        assertResponseTime(response, 5000);
+    }
+
+    @Test
+    @DisplayName("Test user endpoint")
+    void testUserEndpoint() {
+        Response response = request()
+                .pathParam("id", 10)
+                .when()
+                .get("/api/test/user/{id}");
+
+        validateSuccessResponse(response);
+
+        String userName = response.jsonPath().getString("user.name");
+        assertNotNull(userName, "User name should not be null");
+
+        System.out.println("✅ User data retrieved for ID 10: " + userName);
+    }
+}

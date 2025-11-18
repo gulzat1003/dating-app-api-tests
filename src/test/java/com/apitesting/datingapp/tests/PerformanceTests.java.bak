@@ -1,0 +1,87 @@
+package com.apitesting.datingapp.tests;
+
+import com.apitesting.datingapp.base.BaseApiTest;
+import com.apitesting.datingapp.endpoints.UserEndpoint;
+import com.apitesting.datingapp.endpoints.UsersEndpoint;
+import com.apitesting.datingapp.utils.PerformanceMonitor;
+import io.restassured.response.Response;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@DisplayName("Performance Tests")
+public class PerformanceTests extends BaseApiTest {
+
+    @Test
+    @DisplayName("PT-006: Performance test for /users endpoint")
+    void testUsersEndpointPerformance() {
+        long maxResponseTime = 1000; // 1000ms = 1 second
+
+        PerformanceMonitor.MeasurementResult result = PerformanceMonitor.measure(() -> {
+            UsersEndpoint.getUsersByGenderRaw("male");
+        }, 3); // Repeat 3 times
+
+        System.out.printf("Users endpoint performance: Average=%dms, Max=%dms, Min=%dms%n",
+                result.getAverageTime(), result.getMaxTime(), result.getMinTime());
+
+        assertTrue(result.getAverageTime() < maxResponseTime,
+                String.format("Average response time should be less than %dms, but was %dms",
+                        maxResponseTime, result.getAverageTime()));
+    }
+
+    @Test
+    @DisplayName("PT-007: Performance test for /user/{id} endpoint")
+    void testUserEndpointPerformance() {
+        long maxResponseTime = 500; // 500ms
+
+        PerformanceMonitor.MeasurementResult result = PerformanceMonitor.measure(() -> {
+            UserEndpoint.getUserByIdRaw(10);
+        }, 3); // Repeat 3 times
+
+        System.out.printf("User endpoint performance: Average=%dms, Max=%dms, Min=%dms%n",
+                result.getAverageTime(), result.getMaxTime(), result.getMinTime());
+
+        assertTrue(result.getAverageTime() < maxResponseTime,
+                String.format("Average response time should be less than %dms, but was %dms",
+                        maxResponseTime, result.getAverageTime()));
+    }
+
+    @Test
+    @DisplayName("PT-012: Stress testing with concurrent requests")
+    void testStressWithConcurrentRequests() throws InterruptedException {
+        int numberOfThreads = 10; // Reduced for safety
+        int successfulRequests = 0;
+        int failedRequests = 0;
+
+        Thread[] threads = new Thread[numberOfThreads];
+
+        for (int i = 0; i < numberOfThreads; i++) {
+            threads[i] = new Thread(() -> {
+                Response response = UsersEndpoint.getUsersByGenderRaw("male");
+                if (response.getStatusCode() == 200) {
+                    synchronized (this) { successfulRequests++; }
+                } else {
+                    synchronized (this) { failedRequests++; }
+                }
+            });
+        }
+
+        // Start all threads
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        // Wait for all threads to complete
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        System.out.printf("Stress test results: %d successful, %d failed%n",
+                successfulRequests, failedRequests);
+
+        double failureRate = (double) failedRequests / numberOfThreads * 100;
+        assertTrue(failureRate < 1.0,
+                String.format("Failure rate should be less than 1%%, but was %.2f%%", failureRate));
+    }
+}

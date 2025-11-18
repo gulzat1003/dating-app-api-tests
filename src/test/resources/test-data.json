@@ -1,0 +1,13 @@
+{
+  "validGenders": ["male", "female"],
+  "invalidGenders": ["magic", "McCloud", "invalid", "222", "MALE"],
+  "testUserIds": {
+    "valid": [10, 15, 20],
+    "invalid": [0, -1, 999999999, 1],
+    "problematic": [911, 300, 501, 502, 503]
+  },
+  "performance": {
+    "concurrentUsers": 10,
+    "responseTimeThreshold": 1000
+  }
+}
